@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Breaworlds Fish Calculator</title>
+<!-- Font dimuat non-blocking: kalau offline, app tetap langsung tampil pakai font sistem -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<style>
+:root{
+--bg:#000;
+--bg-elev:#0d0d10;
+--card:#131316;
+--card-hi:#1a1a1f;
+--bd:rgba(255,255,255,.06);
+--bd-hi:rgba(255,255,255,.12);
+--txt:#fff;
+--mut:#8e8e93;
+--mut2:#636366;
+--pri:#6c5ce7;
+--pri2:#8b5cf6;
+--pri-g:rgba(108,92,231,.35);
+--gold:#ffd60a;
+--cm:#d1d1d6;
+--un:#30d158;
+--ra:#64d2ff;
+--vr:#bf5af2;
+--sr:#ff453a;
+--ok:#30d158;
+--dock-h:132px;
+}
+*{box-sizing:border-box;font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{overscroll-behavior-y:none}
+body{
+background:var(--bg);color:var(--txt);
+padding-top:env(safe-area-inset-top,0px);
+padding-bottom:calc(var(--dock-h) + 40px + env(safe-area-inset-bottom,0px));
+overflow-x:hidden;min-height:100vh;
+display:flex;flex-direction:column;align-items:center;
+-webkit-font-smoothing:antialiased;letter-spacing:-.01em;
+-webkit-user-select:none;user-select:none;
+}
+input{-webkit-user-select:text;user-select:text}
+button{touch-action:manipulation}
+
+/* === Aurora: statis (tanpa blur + animasi, jauh lebih ringan di HP low-end) === */
+.aurora{position:fixed;inset:0;z-index:-1;pointer-events:none;
+background:
+radial-gradient(circle at 0% 0%,rgba(108,92,231,.22) 0,transparent 55%),
+radial-gradient(circle at 100% 100%,rgba(139,92,246,.16) 0,transparent 60%);
+}
+
+/* === Brand (ikut scroll, nggak makan tempat waktu list di-scroll) === */
+.brand{display:flex;flex-direction:column;align-items:center;position:relative;padding:22px 20px 16px;width:100%;max-width:600px}
+h1{
+font-size:1.45rem;font-weight:700;letter-spacing:-.03em;
+background:linear-gradient(135deg,#fff 0%,#a5a1ff 100%);
+-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+line-height:1.15;text-align:center;padding:0 40px;
+}
+.subtitle{font-size:.78rem;color:var(--mut);font-weight:500;margin-top:4px}
+.info-btn{
+position:absolute;right:16px;top:20px;
+background:var(--card-hi);border:.5px solid var(--bd);
+width:38px;height:38px;border-radius:50%;
+color:var(--mut);font-size:1rem;font-weight:600;
+cursor:pointer;display:flex;align-items:center;justify-content:center;
+transition:all .2s ease;
+}
+.info-btn:active{background:var(--bd-hi);color:#fff;transform:scale(.92)}
+
+/* === Sticky bar: search + filter saja === */
+.bar{
+background:rgba(0,0,0,.86);
+-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+padding:10px 16px 12px;position:sticky;top:0;z-index:100;
+border-bottom:.5px solid var(--bd);width:100%;max-width:600px;
+}
+.sc{position:relative;margin-bottom:10px}
+.sb{
+width:100%;padding:12px 40px 12px 42px;border-radius:12px;
+border:.5px solid var(--bd);background:var(--card-hi);
+color:#fff;font-size:1rem;font-weight:400;
+transition:border-color .2s ease,box-shadow .2s ease;letter-spacing:-.01em;
+-webkit-appearance:none;appearance:none;
+}
+.sb::placeholder{color:var(--mut2)}
+.sb:focus{outline:0;border-color:var(--pri);background:var(--card);box-shadow:0 0 0 4px var(--pri-g)}
+.si{position:absolute;left:15px;top:50%;transform:translateY(-50%);color:var(--mut);font-size:.95rem;pointer-events:none}
+.cs{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bd-hi);border:0;color:var(--txt);width:28px;height:28px;border-radius:50%;font-size:.75rem;cursor:pointer;display:none;align-items:center;justify-content:center}
+
+/* Segmented filter */
+.fr{
+display:flex;gap:0;overflow-x:auto;scrollbar-width:none;
+background:var(--card-hi);border-radius:11px;padding:3px;
+border:.5px solid var(--bd);
+-webkit-overflow-scrolling:touch;
+}
+.fr::-webkit-scrollbar{display:none}
+.fb{
+flex:0 0 auto;background:transparent;border:0;color:var(--mut);
+padding:8px 14px;border-radius:8px;font-size:.8rem;white-space:nowrap;
+cursor:pointer;transition:background .2s ease,color .2s ease;font-weight:600;letter-spacing:-.01em;
+}
+.fb.active{background:var(--pri);color:#fff;box-shadow:0 2px 8px var(--pri-g)}
+
+/* === Fish List === */
+.fl{padding:14px 16px;display:grid;gap:10px;width:100%;max-width:600px}
+.fc{
+background:var(--card);border-radius:18px;padding:12px 14px 12px 16px;
+display:flex;align-items:center;gap:12px;
+border:.5px solid var(--bd);position:relative;overflow:hidden;
+transition:background .2s ease,border-color .2s ease,transform .15s ease;
+}
+.fc:active{transform:scale(.988)}
+.fc.has{border-color:rgba(108,92,231,.5);background:linear-gradient(90deg,rgba(108,92,231,.14),var(--card) 60%)}
+.fc::before{
+content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);
+width:3px;height:60%;border-radius:0 3px 3px 0;background:var(--bd);
+}
+.fc.rc::before{background:var(--cm)}
+.fc.ru::before{background:var(--un)}
+.fc.rr::before{background:var(--ra)}
+.fc.rv::before{background:var(--vr)}
+.fc.rs::before{background:var(--sr)}
+
+/* Gambar (pixel art: contain + pixelated biar nggak kepotong & tetap tajam) */
+.ic{
+width:58px;height:58px;border-radius:14px;flex-shrink:0;
+background:var(--card-hi);
+display:flex;justify-content:center;align-items:center;
+overflow:hidden;position:relative;border:.5px solid var(--bd);
+cursor:pointer;transition:transform .15s ease;
+}
+.ic:active{transform:scale(.94)}
+.ic img{width:100%;height:100%;object-fit:contain;padding:6px;display:none;position:relative;z-index:2;image-rendering:pixelated}
+.ph{font-size:1.75rem;line-height:1;z-index:1}
+
+/* Info */
+.fi{flex:1;min-width:0;cursor:pointer}
+.fn{font-weight:600;font-size:.94rem;letter-spacing:-.02em;margin-bottom:5px;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#fff}
+.fm{font-size:.75rem;color:var(--mut);display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:3px}
+.rc{color:var(--cm)}
+.ru{color:var(--un)}
+.rr{color:var(--ra)}
+.rv{color:var(--vr)}
+.rs{color:var(--sr)}
+.fg{color:var(--gold);font-weight:600;display:inline-flex;align-items:center;gap:3px}
+.evt{font-size:.62rem;font-weight:700;color:#fff;background:linear-gradient(135deg,#bf5af2,#ff375f);padding:2px 7px;border-radius:6px;letter-spacing:.01em}
+.sub{font-size:.72rem;color:var(--pri2);font-weight:600;margin-top:4px;display:none;font-variant-numeric:tabular-nums}
+.fc.has .sub{display:block}
+
+/* Qty stepper */
+.ig{
+display:flex;align-items:center;flex-shrink:0;
+background:var(--card-hi);border:.5px solid var(--bd);
+border-radius:12px;overflow:hidden;height:44px;
+}
+.ig button{
+background:0;border:0;color:var(--pri2);
+font-size:1.2rem;font-weight:600;
+width:38px;height:100%;cursor:pointer;
+display:flex;align-items:center;justify-content:center;
+transition:background .15s ease;
+-webkit-touch-callout:none;
+}
+.ig button:active{background:var(--bd-hi)}
+.ig input{
+width:46px;height:100%;background:0;border:0;color:#fff;
+text-align:center;font-size:.95rem;font-weight:600;
+-moz-appearance:textfield;appearance:textfield;letter-spacing:-.01em;
+}
+.ig input:focus{outline:0;background:rgba(108,92,231,.12)}
+.ig input::-webkit-outer-spin-button,.ig input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+
+/* === Bottom Dock (lebih ringkas: ~130px, sebelumnya ~190px) === */
+.dock{
+position:fixed;bottom:calc(12px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);
+width:calc(100% - 24px);max-width:560px;
+background:rgba(13,13,16,.94);
+-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);
+border:.5px solid var(--bd-hi);border-radius:22px;
+padding:14px 16px 14px;display:flex;flex-direction:column;gap:12px;
+box-shadow:0 16px 40px rgba(0,0,0,.65);
+z-index:200;
+}
+.stats{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+.stat{display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat.r{align-items:flex-end}
+.tl{font-size:.66rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+.tvc{display:flex;align-items:center;gap:8px}
+.tv{font-size:1.65rem;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-.03em;line-height:1.1}
+.ti{font-size:1.15rem;font-weight:700;color:var(--pri2);font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.3}
+.ab{display:flex;gap:10px}
+.act{
+flex:1;padding:13px;border-radius:12px;border:0;
+font-weight:600;font-size:.88rem;cursor:pointer;
+transition:all .15s ease;letter-spacing:-.01em;
+}
+.rb{background:var(--card-hi);color:#ff453a;border:.5px solid rgba(255,69,58,.2);flex:.8}
+.rb:active{background:rgba(255,69,58,.12);transform:scale(.97)}
+.rb.confirm{background:#ff453a;color:#fff}
+.cb{background:linear-gradient(135deg,var(--pri),var(--pri2));color:#fff;box-shadow:0 4px 16px var(--pri-g);flex:1.2}
+.cb:active{transform:scale(.97);opacity:.9}
+
+/* Toast */
+.tst{
+position:fixed;bottom:calc(var(--dock-h) + 28px + env(safe-area-inset-bottom,0px));left:50%;
+transform:translateX(-50%) translateY(20px) scale(.9);
+background:rgba(28,28,30,.96);color:#fff;
+border:.5px solid var(--bd-hi);padding:11px 22px;border-radius:100px;
+font-size:.83rem;font-weight:600;opacity:0;
+transition:all .35s cubic-bezier(.34,1.56,.64,1);
+pointer-events:none;z-index:300;
+box-shadow:0 12px 32px rgba(0,0,0,.6);
+display:flex;align-items:center;gap:8px;white-space:nowrap;
+}
+.tst.show{opacity:1;transform:translateX(-50%) translateY(0) scale(1)}
+.tst::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.tst.err::before{background:var(--sr);box-shadow:0 0 8px var(--sr)}
+
+/* Empty */
+.es{text-align:center;padding:80px 20px;color:var(--mut);font-size:.9rem;font-weight:500}
+.es span{font-size:3.5rem;display:block;margin-bottom:16px;opacity:.25}
+
+/* Modal (bottom sheet) */
+.mo{
+position:fixed;inset:0;background:rgba(0,0,0,.55);
+display:flex;justify-content:center;align-items:flex-end;
+z-index:1000;opacity:0;pointer-events:none;
+transition:opacity .25s ease;
+}
+.mo.show{opacity:1;pointer-events:auto}
+.mc{
+background:var(--bg-elev);
+border-top:.5px solid var(--bd-hi);
+border-radius:28px 28px 0 0;padding:26px 24px calc(34px + env(safe-area-inset-bottom,0px));
+width:100%;max-width:600px;position:relative;
+transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.9,.4,1);
+box-shadow:0 -20px 60px rgba(0,0,0,.6);
+max-height:85vh;overflow-y:auto;
+}
+.mo.show .mc{transform:translateY(0)}
+.mc::before{
+content:'';position:absolute;top:8px;left:50%;transform:translateX(-50%);
+width:36px;height:5px;border-radius:3px;background:var(--bd-hi);
+}
+.mx{
+position:absolute;top:16px;right:16px;
+background:var(--card-hi);border:.5px solid var(--bd);
+width:34px;height:34px;border-radius:50%;color:var(--mut);
+font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+transition:all .15s ease;
+}
+.mx:active{background:var(--bd-hi);color:#fff;transform:scale(.92)}
+
+/* Fish Detail Modal */
+.mi{
+width:96px;height:96px;border-radius:22px;
+background:var(--card-hi);
+display:flex;justify-content:center;align-items:center;
+margin:8px auto 16px;border:.5px solid var(--bd);overflow:hidden;
+}
+.mi img{width:100%;height:100%;object-fit:contain;padding:10px;display:none;image-rendering:pixelated}
+.mi .ph{font-size:2.8rem}
+.mt{font-size:1.3rem;font-weight:700;text-align:center;margin-bottom:4px;letter-spacing:-.02em}
+.ms{font-size:.82rem;color:var(--mut);font-weight:500;text-align:center;margin-bottom:22px}
+.mr{
+display:flex;justify-content:space-between;align-items:center;
+padding:14px 0;border-bottom:.5px solid var(--bd);
+font-size:.88rem;font-weight:500;
+}
+.mr:last-child{border-bottom:0}
+.ml{color:var(--mut)}
+.mv{color:#fff;font-weight:600;display:flex;align-items:center;gap:6px}
+.meb{
+background:linear-gradient(135deg,#bf5af2,#ff375f);
+color:#fff;padding:4px 10px;border-radius:8px;
+font-size:.72rem;font-weight:600;letter-spacing:-.01em;
+}
+.di{width:1rem;height:1rem;object-fit:contain;vertical-align:middle}
+
+/* About Modal */
+.about-header{text-align:center;padding:8px 0 22px;border-bottom:.5px solid var(--bd);margin-bottom:22px}
+.about-logo{
+width:72px;height:72px;border-radius:20px;margin:0 auto 14px;
+background:linear-gradient(135deg,var(--pri),var(--pri2));
+display:flex;align-items:center;justify-content:center;
+font-size:1.8rem;font-weight:800;color:#fff;
+box-shadow:0 12px 32px var(--pri-g);
+letter-spacing:-.03em;
+}
+.about-name{font-size:1.25rem;font-weight:700;letter-spacing:-.02em;margin-bottom:6px;text-align:center}
+.about-ver{
+display:inline-block;padding:4px 12px;border-radius:100px;
+background:var(--card-hi);border:.5px solid var(--bd);
+font-size:.7rem;font-weight:600;color:var(--mut);
+text-transform:uppercase;letter-spacing:.05em;
+}
+.about-section{margin-bottom:22px}
+.about-label{font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.about-text{font-size:.88rem;color:var(--txt);font-weight:500;line-height:1.5}
+.about-company{
+padding:16px;border-radius:14px;background:var(--card-hi);
+border:.5px solid var(--bd);margin-bottom:14px;
+}
+.about-company-name{
+font-size:1rem;font-weight:700;letter-spacing:-.01em;
+background:linear-gradient(135deg,#fff,#a5a1ff);
+-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+margin-bottom:4px;
+}
+.about-company-desc{font-size:.8rem;color:var(--mut);line-height:1.4}
+.about-footer{
+text-align:center;font-size:.75rem;color:var(--mut2);
+padding-top:16px;border-top:.5px solid var(--bd);margin-top:8px;
+line-height:1.6;
+}
+
+/* RTL (Arab) */
+[dir=rtl] .info-btn{right:auto;left:16px}
+[dir=rtl] .si{left:auto;right:15px}
+[dir=rtl] .sb{padding:12px 42px 12px 40px}
+[dir=rtl] .cs{right:auto;left:8px}
+[dir=rtl] .fc{padding:12px 16px 12px 14px}
+[dir=rtl] .fc::before{left:auto;right:0;border-radius:3px 0 0 3px}
+[dir=rtl] .mx{right:auto;left:16px}
+
+/* Responsive */
+@media(max-width:380px){
+h1{font-size:1.25rem}
+.fc{padding:10px 12px 10px 14px;gap:10px;border-radius:16px}
+.ic{width:52px;height:52px;border-radius:12px}
+.ph{font-size:1.5rem}
+.fn{font-size:.87rem}
+.fm{font-size:.7rem}
+.ig{height:42px;border-radius:11px}
+.ig input{width:40px;font-size:.88rem}
+.ig button{width:33px;font-size:1.1rem}
+.tv{font-size:1.45rem}
+.act{padding:12px;font-size:.82rem}
+}
+@media(prefers-reduced-motion:reduce){
+*{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="aurora"></div>
+
+<div class="brand">
+<h1 data-i="0">Breaworlds Calculator</h1>
+<div class="subtitle" data-i="19">Fish Value Calculator</div>
+<button class="info-btn" onclick="openAbout()" aria-label="About">ⓘ</button>
+</div>
+
+<div class="bar">
+<div class="sc">
+<span class="si">🔍</span>
+<input type="text" id="searchInput" class="sb" data-ip="1" placeholder="Search fish name..." autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search">
+<button class="cs" id="clearSearch" aria-label="Clear">✕</button>
+</div>
+<div class="fr" id="filterContainer">
+<button class="fb active" data-filter="all" data-i="2">All</button>
+<button class="fb" data-filter="sel" data-x="sel">Selected</button>
+<button class="fb" data-filter="Small">Small</button>
+<button class="fb" data-filter="Medium">Medium</button>
+<button class="fb" data-filter="Big">Big</button>
+<button class="fb" data-filter="Common">Common</button>
+<button class="fb" data-filter="Uncommon">Uncommon</button>
+<button class="fb" data-filter="Rare">Rare</button>
+<button class="fb" data-filter="Very Rare">Very Rare</button>
+<button class="fb" data-filter="Super Rare">Super Rare</button>
+</div>
+</div>
+
+<div class="fl" id="fishList"></div>
+
+<div class="dock">
+<div class="stats">
+<div class="stat">
+<span class="tl" data-i="3">Total Gems</span>
+<div class="tvc">
+<img src="images/diamond.png" class="di" style="width:1.4rem;height:1.4rem" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+<span style="display:none;font-size:1.2rem">💎</span>
+<span class="tv" id="totalGems">0</span>
+</div>
+</div>
+<div class="stat r">
+<span class="tl" data-i="4">Total Items</span>
+<span class="ti" id="totalItems">0</span>
+</div>
+</div>
+<div class="ab">
+<button class="act rb" id="resetBtn" onclick="resetAll()" data-i="5">Reset</button>
+<button class="act cb" onclick="copyTotal()" data-i="6">Copy Result</button>
+</div>
+</div>
+
+<div class="tst" id="toast" data-i="7">Copied!</div>
+
+<!-- Fish Detail Modal -->
+<div class="mo" id="infoModal" onclick="closeModals()">
+<div class="mc" onclick="event.stopPropagation()">
+<button class="mx" onclick="closeModals()" aria-label="Close">✕</button>
+<div class="mi"><img id="mImg" src="" alt=""><div class="ph" id="mEmoji">🐟</div></div>
+<div class="mt" id="mName">Fish Name</div>
+<div class="ms" id="mSize">Size</div>
+<div class="mr"><span class="ml" data-i="9">Rarity</span><span class="mv" id="mRarity">-</span></div>
+<div class="mr"><span class="ml" data-i="10">Gems</span><span class="mv" id="mGems" style="color:var(--gold)">
+<img src="images/diamond.png" class="di" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+<span style="display:none">💎</span><span>0</span></span></div>
+<div class="mr" id="mEventRow" style="display:none"><span class="ml" data-i="11">Event</span><span class="mv" id="mEvent">-</span></div>
+</div>
+</div>
+
+<!-- About Modal -->
+<div class="mo" id="aboutModal" onclick="closeModals()">
+<div class="mc" onclick="event.stopPropagation()">
+<button class="mx" onclick="closeModals()" aria-label="Close">✕</button>
+
+<div class="about-header">
+<div class="about-logo">BW</div>
+<div class="about-name">Breaworlds Fish Calculator</div>
+<div class="about-ver" data-i="20">Version 1.0.0 Beta</div>
+</div>
+
+<div class="about-section">
+<div class="about-label" data-i="21">About</div>
+<div class="about-text" data-i="22">A lightweight calculator to compute the total gems value of your fish inventory in Breaworlds. Fast, clean, and works offline.</div>
+</div>
+
+<div class="about-company">
+<div class="about-company-name">TRASHNEVERDIE COMPANY</div>
+<div class="about-company-desc" data-i="23">Crafting useful tools for gamers, one app at a time.</div>
+</div>
+
+<div class="about-section">
+<div class="about-label" data-i="24">Features</div>
+<div class="about-text" data-i="25">• 50+ languages supported<br>• Auto-detect device language<br>• Offline mode<br>• Live total calculation<br>• Fish detail info<br>• Copy result to clipboard</div>
+</div>
+
+<div class="about-footer">
+© 2025 TRASHNEVERDIE COMPANY<br>
+<span data-i="26">Made with ❤ for the Breaworlds community</span>
+</div>
+
+</div>
+</div>
+
+<script>
+const L={
+en:["Breaworlds Calculator","Search fish name...","All","Total Gems","Total Items","Reset","Copy Result","Copied!","Data reset!","Rarity","Gems","Event","No Size","Size","Fish not found.","🎣 BREAWORLDS FISH CALCULATOR\n============================\n\n","No fish selected.\n","Total Items","Total Gems","Fish Value Calculator","Version 1.0.0 Beta","About","A lightweight calculator to compute the total gems value of your fish inventory in Breaworlds. Fast, clean, and works offline.","Crafting useful tools for gamers, one app at a time.","Features","• 50+ languages supported<br>• Auto-detect device language<br>• Offline mode<br>• Live total calculation<br>• Fish detail info<br>• Copy result to clipboard","Made with ❤ for the Breaworlds community"],
+id:["Kalkulator Ikan Breaworlds","Cari nama ikan...","Semua","Total Gems","Total Item","Reset","Copy Hasil","Berhasil disalin!","Data di-reset!","Rarity","Gems","Event","Tanpa Ukuran","Ukuran","Ikan tidak ditemukan.","🎣 KALKULATOR IKAN BREAWORLDS\n============================\n\n","Belum ada ikan.\n","Total Item","Total Gems","Kalkulator Nilai Ikan","Versi 1.0.0 Beta","Tentang","Kalkulator ringan untuk menghitung total gems dari inventori ikan kamu di Breaworlds. Cepat, bersih, dan bisa offline.","Membuat tools berguna untuk gamer, satu aplikasi dalam satu waktu.","Fitur","• 50+ bahasa didukung<br>• Deteksi otomatis bahasa HP<br>• Mode offline<br>• Hitung total langsung<br>• Info detail ikan<br>• Copy hasil ke clipboard","Dibuat dengan ❤ untuk komunitas Breaworlds"],
+ms:["Kalkulator Ikan Breaworlds","Cari nama ikan...","Semua","Jumlah Gems","Jumlah Item","Set Semula","Salin Hasil","Berjaya disalin!","Data direset!","Kelangkaan","Gems","Acara","Tiada Saiz","Saiz","Ikan tidak dijumpai.","🎣 KALKULATOR IKAN BREAWORLDS\n============================\n\n","Tiada ikan dipilih.\n","Jumlah Item","Jumlah Gems","Kalkulator Nilai Ikan","Versi 1.0.0 Beta","Tentang","Kalkulator ringan untuk mengira jumlah gems inventori ikan anda di Breaworlds. Pantas, bersih, dan berfungsi offline.","Membina alat berguna untuk gamer.","Ciri","• 50+ bahasa disokong<br>• Auto-kesan bahasa peranti<br>• Mod offline<br>• Pengiraan langsung<br>• Info detail ikan<br>• Salin hasil","Dibuat dengan ❤ untuk komuniti Breaworlds"],
+es:["Calculadora Breaworlds","Buscar pez...","Todos","Gemas Totales","Artículos Totales","Reiniciar","Copiar","¡Copiado!","¡Datos reiniciados!","Rareza","Gemas","Evento","Sin Tamaño","Tamaño","Pez no encontrado.","🎣 CALCULADORA BREAWORLDS\n============================\n\n","No hay peces.\n","Artículos Totales","Gemas Totales","Calculadora de Peces","Versión 1.0.0 Beta","Acerca de","Una calculadora ligera para calcular el valor total de gemas de tu inventario de peces en Breaworlds.","Creando herramientas útiles para gamers.","Características","• 50+ idiomas<br>• Detección automática<br>• Modo offline<br>• Cálculo en vivo<br>• Info detallada<br>• Copiar resultado","Hecho con ❤ para la comunidad de Breaworlds"],
+pt:["Calculadora Breaworlds","Buscar peixe...","Todos","Gemas Totais","Itens Totais","Reiniciar","Copiar","Copiado!","Dados reiniciados!","Raridade","Gemas","Evento","Sem Tamanho","Tamanho","Peixe não encontrado.","🎣 CALCULADORA BREAWORLDS\n============================\n\n","Nenhum peixe.\n","Itens Totais","Gemas Totais","Calculadora de Peixes","Versão 1.0.0 Beta","Sobre","Uma calculadora leve para calcular o valor total de gemas do seu inventário de peixes no Breaworlds.","Criando ferramentas úteis para gamers.","Recursos","• 50+ idiomas<br>• Detecção automática<br>• Modo offline<br>• Cálculo em tempo real<br>• Info detalhada<br>• Copiar resultado","Feito com ❤ para a comunidade Breaworlds"],
+fr:["Calculatrice Breaworlds","Rechercher un poisson...","Tous","Gemmes Totales","Objets Totaux","Réinitialiser","Copier","Copié !","Données réinitialisées !","Rareté","Gemmes","Événement","Sans Taille","Taille","Poisson non trouvé.","🎣 CALCULATRICE BREAWORLDS\n============================\n\n","Aucun poisson.\n","Objets Totaux","Gemmes Totales","Calculatrice de Poissons","Version 1.0.0 Bêta","À propos","Une calculatrice légère pour calculer la valeur totale des gemmes de votre inventaire de poissons dans Breaworlds.","Créer des outils utiles pour les gamers.","Fonctionnalités","• 50+ langues<br>• Détection auto<br>• Mode hors ligne<br>• Calcul en direct<br>• Infos détaillées<br>• Copier le résultat","Fait avec ❤ pour la communauté Breaworlds"],
+de:["Breaworlds Rechner","Fisch suchen...","Alle","Gesamt-Edelsteine","Gesamtgegenstände","Zurücksetzen","Kopieren","Kopiert!","Daten zurückgesetzt!","Seltenheit","Edelsteine","Event","Keine Größe","Größe","Fisch nicht gefunden.","🎣 BREAWORLDS RECHNER\n============================\n\n","Kein Fisch ausgewählt.\n","Gesamtgegenstände","Gesamt-Edelsteine","Fischwert-Rechner","Version 1.0.0 Beta","Über","Ein leichter Rechner zur Berechnung des Gesamtwerts Ihrer Fischbestände in Breaworlds.","Nützliche Tools für Gamer.","Funktionen","• 50+ Sprachen<br>• Automatische Erkennung<br>• Offline-Modus<br>• Live-Berechnung<br>• Detaillierte Infos<br>• Ergebnis kopieren","Mit ❤ für die Breaworlds-Community"],
+it:["Calcolatrice Breaworlds","Cerca pesce...","Tutti","Gemme Totali","Oggetti Totali","Ripristina","Copia","Copiato!","Dati ripristinati!","Rarità","Gemme","Evento","Senza Dimensione","Dimensione","Pesce non trovato.","🎣 CALCOLATRICE BREAWORLDS\n============================\n\n","Nessun pesce.\n","Oggetti Totali","Gemme Totali","Calcolatore Pesci","Versione 1.0.0 Beta","Informazioni","Un calcolatore leggero per calcolare il valore totale delle gemme del tuo inventario di pesci in Breaworlds.","Creare strumenti utili per i gamer.","Funzionalità","• 50+ lingue<br>• Rilevamento automatico<br>• Modalità offline<br>• Calcolo in tempo reale<br>• Info dettagliate<br>• Copia risultato","Fatto con ❤ per la community di Breaworlds"],
+nl:["Breaworlds Calculator","Vis zoeken...","Alle","Totaal Gems","Totaal Items","Reset","Kopiëren","Gekopieerd!","Gegevens gereset!","Zeldzaamheid","Gems","Evenement","Geen maat","Maat","Vis niet gevonden.","🎣 BREAWORLDS CALCULATOR\n============================\n\n","Geen vis geselecteerd.\n","Totaal Items","Totaal Gems","Vissen Calculator","Versie 1.0.0 Beta","Over","Een lichte calculator om de totale waarde van je visinventaris in Breaworlds te berekenen.","Nuttige tools maken voor gamers.","Functies","• 50+ talen<br>• Auto-detectie<br>• Offline modus<br>• Live berekening<br>• Vis details<br>• Resultaat kopiëren","Gemaakt met ❤ voor de Breaworlds community"],
+ru:["Калькулятор Breaworlds","Поиск рыбы...","Все","Всего гемов","Всего предметов","Сброс","Копировать","Скопировано!","Данные сброшены!","Редкость","Гемы","Событие","Без размера","Размер","Рыба не найдена.","🎣 КАЛЬКУЛЯТОР BREAWORLDS\n============================\n\n","Рыба не выбрана.\n","Всего предметов","Всего гемов","Калькулятор Рыбы","Версия 1.0.0 Бета","О приложении","Легкий калькулятор для подсчета общей стоимости гемов вашего рыбного инвентаря в Breaworlds.","Создаем полезные инструменты для геймеров.","Функции","• 50+ языков<br>• Автоопределение<br>• Офлайн режим<br>• Живой подсчет<br>• Детальная информация<br>• Копировать результат","Сделано с ❤ для сообщества Breaworlds"],
+tr:["Breaworlds Hesap Makinesi","Balık ara...","Tümü","Toplam Mücevher","Toplam Öğe","Sıfırla","Kopyala","Kopyalandı!","Veriler sıfırlandı!","Nadirlik","Mücevher","Etkinlik","Boyut Yok","Boyut","Balık bulunamadı.","🎣 BREAWORLDS HESAP MAKİNESİ\n============================\n\n","Balık seçilmedi.\n","Toplam Öğe","Toplam Mücevher","Balık Hesap Makinesi","Sürüm 1.0.0 Beta","Hakkında","Breaworlds balık envanterinizin toplam mücevher değerini hesaplamak için hafif bir hesap makinesi.","Gamer'lar için faydalı araçlar.","Özellikler","• 50+ dil<br>• Otomatik algılama<br>• Çevrimdışı mod<br>• Canlı hesaplama<br>• Detaylı bilgi<br>• Sonucu kopyala","Breaworlds topluluğu için ❤ ile yapıldı"],
+ja:["Breaworlds 計算機","魚を検索...","すべて","合計ジェム","合計アイテム","リセット","コピー","コピーしました！","データをリセットしました！","レアリティ","ジェム","イベント","サイズなし","サイズ","魚が見つかりません。","🎣 BREAWORLDS 計算機\n============================\n\n","魚が選択されていません。\n","合計アイテム","合計ジェム","魚の価値計算機","バージョン 1.0.0 ベータ","について","Breaworldsの魚のインベントリの合計ジェム価値を計算する軽量な計算機。","ゲーマーのための便利なツール。","機能","• 50以上の言語<br>• 自動検出<br>• オフラインモード<br>• リアルタイム計算<br>• 詳細情報<br>• 結果をコピー","Breaworldsコミュニティのために❤を込めて"],
+ko:["Breaworlds 계산기","물고기 검색...","전체","총 젬","총 아이템","초기화","복사","복사됨!","데이터가 초기화되었습니다!","희귀도","젬","이벤트","크기 없음","크기","물고기를 찾을 수 없습니다.","🎣 BREAWORLDS 계산기\n============================\n\n","선택된 물고기가 없습니다.\n","총 아이템","총 젬","물고기 가치 계산기","버전 1.0.0 베타","정보","Breaworlds 물고기 인벤토리의 총 젬 가치를 계산하는 가벼운 계산기.","게이머를 위한 유용한 도구.","기능","• 50개 이상 언어<br>• 자동 감지<br>• 오프라인 모드<br>• 실시간 계산<br>• 상세 정보<br>• 결과 복사","Breaworlds 커뮤니티를 위해 ❤로 제작"],
+zh:["Breaworlds 计算器","搜索鱼...","全部","总宝石","总物品","重置","复制","已复制！","数据已重置！","稀有度","宝石","活动","无尺寸","尺寸","未找到鱼。","🎣 BREAWORLDS 计算器\n============================\n\n","未选择鱼。\n","总物品","总宝石","鱼类价值计算器","版本 1.0.0 测试版","关于","一个轻量级计算器，用于计算您在Breaworlds中鱼类的宝石总价值。","为游戏玩家打造实用工具。","功能","• 50+种语言<br>• 自动检测<br>• 离线模式<br>• 实时计算<br>• 详细鱼信息<br>• 复制结果","为Breaworlds社区用❤制作"],
+th:["เครื่องคิดเลข Breaworlds","ค้นหาปลา...","ทั้งหมด"," gems ทั้งหมด","ไอเท็มทั้งหมด","รีเซ็ต","คัดลอก","คัดลอกแล้ว!","รีเซ็ตข้อมูลแล้ว!","ความหายาก"," gems","อีเวนต์","ไม่มีขนาด","ขนาด","ไม่พบปลา","🎣 เครื่องคิดเลข BREAWORLDS\n============================\n\n","ยังไม่ได้เลือกปลา\n","ไอเท็มทั้งหมด"," gems ทั้งหมด","เครื่องคิดเลขมูลค่าปลา","เวอร์ชัน 1.0.0 เบต้า","เกี่ยวกับ","เครื่องคิดเลขน้ำหนักเบาสำหรับคำนวณมูลค่า gems รวมของสินค้าคงคลังปลาใน Breaworlds","สร้างเครื่องมือที่มีประโยชน์สำหรับเกมเมอร์","คุณสมบัติ","• 50+ ภาษา<br>• ตรวจจับอัตโนมัติ<br>• โหมดออฟไลน์<br>• คำนวณสด<br>• ข้อมูลปลา<br>• คัดลอกผลลัพธ์","สร้างด้วย ❤ สำหรับชุมชน Breaworlds"],
+vi:["Máy tính Breaworlds","Tìm cá...","Tất cả","Tổng Gem","Tổng Vật phẩm","Đặt lại","Sao chép","Đã sao chép!","Đã đặt lại dữ liệu!","Độ hiếm","Gem","Sự kiện","Không kích thước","Kích thước","Không tìm thấy cá.","🎣 MÁY TÍNH BREAWORLDS\n============================\n\n","Chưa chọn cá.\n","Tổng Vật phẩm","Tổng Gem","Máy tính giá trị cá","Phiên bản 1.0.0 Beta","Giới thiệu","Máy tính nhẹ để tính tổng giá trị gem của kho cá của bạn trong Breaworlds.","Tạo công cụ hữu ích cho game thủ.","Tính năng","• Hỗ trợ 50+ ngôn ngữ<br>• Tự động phát hiện<br>• Chế độ offline<br>• Tính toán trực tiếp<br>• Thông tin chi tiết<br>• Sao chép kết quả","Được làm với ❤ cho cộng đồng Breaworlds"],
+hi:["Breaworlds कैलकुलेटर","मछली खोजें...","सभी","कुल रत्न","कुल आइटम","रीसेट","कॉपी","कॉपी किया गया!","डेटा रीसेट किया गया!","दुर्लभता","रत्न","इवेंट","कोई आकार नहीं","आकार","मछली नहीं मिली।","🎣 BREAWORLDS कैलकुलेटर\n============================\n\n","कोई मछली नहीं चुनी गई।\n","कुल आइटम","कुल रत्न","मछली मूल्य कैलकुलेटर","संस्करण 1.0.0 बीटा","के बारे में","Breaworlds में आपकी मछली इन्वेंट्री के कुल रत्न मूल्य की गणना के लिए एक हल्का कैलकुलेटर।","गेमर्स के लिए उपयोगी टूल बनाना।","विशेषताएं","• 50+ भाषाएँ<br>• ऑटो-डिटेक्ट<br>• ऑफ़लाइन मोड<br>• लाइव गणना<br>• विस्तृत जानकारी<br>• परिणाम कॉपी करें","Breaworlds समुदाय के लिए ❤ के साथ बनाया गया"],
+ar:["حاسبة Breaworlds","ابحث عن سمكة...","الكل","إجمالي الجواهر","إجمالي العناصر","إعادة تعيين","نسخ","تم النسخ!","تمت إعادة تعيين البيانات!","الندرة","الجواهر","حدث","بدون حجم","الحجم","لم يتم العثور على سمكة.","🎣 حاسبة BREAWORLDS\n============================\n\n","لم يتم اختيار أي سمكة.\n","إجمالي العناصر","إجمالي الجواهر","حاسبة قيمة الأسماك","الإصدار 1.0.0 تجريبي","حول","حاسبة خفيفة لحساب القيمة الإجمالية للجواهر في مخزون الأسماك في Breaworlds.","إنشاء أدوات مفيدة للاعبين.","الميزات","• 50+ لغة<br>• اكتشاف تلقائي<br>• وضع عدم الاتصال<br>• حساب مباشر<br>• معلومات تفصيلية<br>• نسخ النتيجة","صنع بـ ❤ لمجتمع Breaworlds"],
+tl:["Breaworlds Calculator","Maghanap ng isda...","Lahat","Kabuuang Gems","Kabuuang Item","I-reset","Kopyahin","Kinopya!","Na-reset ang data!","Rarity","Gems","Event","Walang Sukat","Sukat","Hindi mahanap ang isda.","🎣 BREAWORLDS CALCULATOR\n============================\n\n","Walang napiling isda.\n","Kabuuang Item","Kabuuang Gems","Calculator ng Isda","Bersyon 1.0.0 Beta","Tungkol","Magaan na calculator para sa kabuuang halaga ng gems ng iyong isda sa Breaworlds.","Paggawa ng kapaki-pakinabang na tool para sa mga gamer.","Mga Tampok","• 50+ wika<br>• Auto-detect<br>• Offline mode<br>• Live calculation<br>• Detalyadong info<br>• Kopyahin ang resulta","Ginawa with ❤ para sa Breaworlds community"]
+};
+
+// Teks tambahan untuk fitur baru (bahasa lain otomatis fallback ke English)
+const X={
+en:{sel:"Selected",tap:"Tap again to confirm",fail:"Copy failed"},
+id:{sel:"Dipilih",tap:"Tekan lagi untuk konfirmasi",fail:"Gagal menyalin"},
+ms:{sel:"Dipilih",tap:"Tekan lagi untuk sahkan",fail:"Gagal menyalin"},
+es:{sel:"Elegidos",tap:"Toca de nuevo para confirmar",fail:"Error al copiar"},
+pt:{sel:"Selecionados",tap:"Toque de novo para confirmar",fail:"Falha ao copiar"},
+fr:{sel:"Choisis",tap:"Appuyez à nouveau pour confirmer",fail:"Échec de la copie"},
+de:{sel:"Gewählt",tap:"Zum Bestätigen erneut tippen",fail:"Kopieren fehlgeschlagen"},
+ru:{sel:"Выбрано",tap:"Нажмите ещё раз",fail:"Не удалось скопировать"},
+tr:{sel:"Seçilen",tap:"Onaylamak için tekrar dokun",fail:"Kopyalanamadı"},
+ja:{sel:"選択中",tap:"もう一度タップで確定",fail:"コピー失敗"},
+ko:{sel:"선택됨",tap:"확인하려면 다시 누르세요",fail:"복사 실패"},
+zh:{sel:"已选",tap:"再次点击确认",fail:"复制失败"},
+vi:{sel:"Đã chọn",tap:"Chạm lần nữa để xác nhận",fail:"Sao chép thất bại"}
+};
+
+// === STORAGE (aman kalau DOM storage dimatikan di WebView) ===
+const store={
+  get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+const MAX=99999;
+
+// === STATE ===
+let lang='en',locale='en-US',filt='all',search='',nf=null;
+let qty={};
+try{
+  const o=JSON.parse(store.get('bw_qty')||'{}');
+  for(const k in o){const n=parseInt(o[k],10);if(n>0)qty[k]=Math.min(n,MAX)}
+}catch(e){qty={}}
+const $=id=>document.getElementById(id);
+
+// === DATA IKAN ===
+const F=[
+[1,"Carp","Small","Common",12,null],[2,"Carp","Medium","Common",60,null],[3,"Carp","Big","Uncommon",300,null],
+[4,"Trout","Small","Common",16,null],[5,"Trout","Medium","Common",80,null],[6,"Trout","Big","Uncommon",400,null],
+[7,"Catfish","Small","Common",15,null],[8,"Catfish","Medium","Common",80,null],[9,"Catfish","Big","Uncommon",400,null],
+[10,"Salmon","Small","Common",24,null],[11,"Salmon","Medium","Uncommon",120,null],[12,"Salmon","Big","Rare",600,null],
+[13,"Goldfish","Small","Common",24,null],[14,"Goldfish","Medium","Uncommon",120,null],[15,"Goldfish","Big","Rare",600,null],
+[16,"Tropical","Small","Common",24,null],[17,"Tropical","Medium","Common",180,null],[18,"Tropical","Big","Common",600,null],
+[19,"Piranha","Small","Uncommon",40,null],[20,"Piranha","Medium","Uncommon",300,null],[21,"Piranha","Big","Rare",900,null],
+[22,"Gem Fish","Small","Uncommon",500,"Gem Fish Migration"],[23,"Gem Fish","Medium","Uncommon",1200,"Gem Fish Migration"],[24,"Gem Fish","Big","Uncommon",2000,"Gem Fish Migration"],
+[25,"Squid","Small","Common",100,null],[26,"Squid","Medium","Uncommon",480,null],[27,"Squid","Big","Rare",2200,null],
+[28,"Tuna","Small","Uncommon",120,null],[29,"Tuna","Medium","Rare",600,null],[30,"Tuna","Big","Very Rare",3000,null],
+[31,"Lobster","-","Very Rare",1800,null],[32,"Stingray","-","Very Rare",1200,null],[33,"Shark","-","Very Rare",800,null],
+[34,"Marlin","-","Super Rare",500,null],[35,"Love Fish","-","Rare",400,"Fishing Boost"],[36,"Crab","-","Uncommon",300,null],[37,"Clownfish","-","Uncommon",160,null]
+].map(a=>({id:a[0],name:a[1],size:a[2],rarity:a[3],gems:a[4],event:a[5]}));
+const FM=new Map(F.map(f=>[f.id,f]));
+
+// === HELPERS ===
+const t=(k)=>L[lang][k]||L.en[k];
+const x=(k)=>(X[lang]&&X[lang][k])||X.en[k];
+const fmt=(n)=>{try{nf=nf||new Intl.NumberFormat(locale);return nf.format(n)}catch(e){return String(n)}};
+const emoji=(n)=>{n=n.toLowerCase();return n.includes('shark')?'🦈':n.includes('squid')?'🦑':n.includes('crab')?'🦀':n.includes('lobster')?'🦞':'🐟'};
+const imgPath=(f)=>`images/${f.size!=='-'?f.size.toLowerCase()+'_':''}${f.name.toLowerCase().replace(/ /g,'_')}.png`;
+const rCls=(r)=>r.replace(/ /g,'-');
+const nameOf=(f)=>`${f.name}${f.size!=='-'?` (${f.size})`:''}`;
+
+// === i18n ===
+function setLang(){
+  const nl=(navigator.language||'en').toLowerCase();
+  const lc=nl.split('-')[0];
+  lang=L[lc]?lc:'en';
+  try{new Intl.NumberFormat(nl);locale=nl}catch(e){locale='en-US'}
+  nf=null;
+  document.documentElement.lang=lang;
+  document.documentElement.dir=lang==='ar'?'rtl':'ltr';
+  document.querySelectorAll('[data-i]').forEach(e=>e.innerHTML=t(+e.getAttribute('data-i')));
+  document.querySelectorAll('[data-x]').forEach(e=>e.textContent=x(e.dataset.x));
+  document.querySelectorAll('[data-ip]').forEach(e=>e.placeholder=t(+e.getAttribute('data-ip')));
+}
+
+// === RENDER ===
+function render(){
+  const list=$('fishList');
+  const q=search.trim().toLowerCase();
+  const filtered=F.filter(f=>{
+    const ms=!q||f.name.toLowerCase().includes(q)||f.rarity.toLowerCase().includes(q)||(f.size!=='-'&&f.size.toLowerCase().includes(q));
+    let mf;
+    if(filt==='all')mf=true;
+    else if(filt==='sel')mf=(qty[f.id]||0)>0;
+    else if(['Small','Medium','Big'].includes(filt))mf=f.size===filt;
+    else mf=f.rarity===filt;
+    return ms&&mf;
+  });
+  if(!filtered.length){list.innerHTML=`<div class="es"><span>🎣</span>${t(14)}</div>`;return}
+  list.innerHTML=filtered.map(f=>{
+    const q=qty[f.id]||0,rc=rCls(f.rarity),k=rc[0].toLowerCase();
+    return `
+    <div class="fc r${k}${q>0?' has':''}" id="c${f.id}">
+      <div class="ic" onclick="openM(${f.id})">
+        <img src="${imgPath(f)}" alt="" decoding="async" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" onload="this.style.display='block';this.nextElementSibling.style.display='none'">
+        <div class="ph" style="display:block">${emoji(f.name)}</div>
+      </div>
+      <div class="fi" onclick="openM(${f.id})">
+        <div class="fn">${nameOf(f)}</div>
+        <div class="fm">
+          <span class="pill r${k}">${f.rarity}</span>
+          <span class="pill fg"><img src="images/diamond.png" class="di" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">💎</span>${fmt(f.gems)}</span>
+          ${f.event?`<span class="evt">★ ${t(11)}</span>`:''}
+        </div>
+        <div class="sub" id="s${f.id}">= ${fmt(f.gems*q)}</div>
+      </div>
+      <div class="ig">
+        <button aria-label="−" onclick="stepClick(${f.id},-1)" onpointerdown="holdStart(${f.id},-1)" onpointerup="holdEnd()" onpointerleave="holdEnd()" onpointercancel="holdEnd()" oncontextmenu="return false">−</button>
+        <input type="number" id="q${f.id}" value="${q}" min="0" max="${MAX}" inputmode="numeric" pattern="[0-9]*" onfocus="this.select()" oninput="man(${f.id},this.value,true)" onchange="man(${f.id},this.value)">
+        <button aria-label="+" onclick="stepClick(${f.id},1)" onpointerdown="holdStart(${f.id},1)" onpointerup="holdEnd()" onpointerleave="holdEnd()" onpointercancel="holdEnd()" oncontextmenu="return false">+</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// Update satu kartu tanpa render ulang seluruh list
+function upd(id){
+  const f=FM.get(id),q=qty[id]||0;
+  const c=$('c'+id);
+  if(c)c.classList.toggle('has',q>0);
+  const s=$('s'+id);
+  if(s&&f)s.textContent='= '+fmt(f.gems*q);
+}
+
+// === QTY ===
+window.man=(id,v,live)=>{
+  let n=parseInt(v,10);
+  if(!(n>0))n=0;
+  if(n>MAX)n=MAX;
+  qty[id]=n;
+  const e=$('q'+id);
+  if(e&&(!live||(v!==''&&String(n)!==String(v).trim())))e.value=n;
+  upd(id);calc();
+};
+window.chg=(id,d)=>{
+  const n=Math.max(0,Math.min(MAX,(qty[id]||0)+d));
+  qty[id]=n;
+  const e=$('q'+id);if(e)e.value=n;
+  upd(id);calc();
+};
+
+// Tap = +/-1, tahan = auto-repeat (makin lama makin cepat)
+const hold={t:null,i:null,n:0,fired:false};
+window.holdStart=(id,d)=>{
+  holdEnd();hold.fired=false;hold.n=0;
+  hold.t=setTimeout(()=>{
+    hold.fired=true;
+    hold.i=setInterval(()=>{hold.n++;chg(id,d*(hold.n>12?10:hold.n>6?5:1))},90);
+  },450);
+};
+window.holdEnd=()=>{clearTimeout(hold.t);clearInterval(hold.i);hold.t=hold.i=null};
+window.stepClick=(id,d)=>{
+  if(hold.fired){hold.fired=false;return}
+  chg(id,d);
+  if(navigator.vibrate)try{navigator.vibrate(6)}catch(e){}
+};
+
+// === CALC ===
+function calc(){
+  let g=0,i=0;
+  for(const k in qty){const f=FM.get(+k),n=qty[k];if(f&&n>0){g+=f.gems*n;i+=n}}
+  $('totalGems').textContent=fmt(g);
+  $('totalItems').textContent=fmt(i);
+  store.set('bw_qty',JSON.stringify(qty));
+}
+
+// === TOAST ===
+let toastT;
+function showToast(msg,err){
+  const el=$('toast');
+  el.textContent=msg;
+  el.classList.toggle('err',!!err);
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+// === MODALS (+ tombol Back Android menutup sheet, bukan keluar app) ===
+function pushState(){try{history.pushState({m:1},'')}catch(e){}}
+function hideAll(){
+  $('infoModal').classList.remove('show');
+  $('aboutModal').classList.remove('show');
+  document.body.style.overflow='';
+}
+window.closeModals=()=>{
+  const open=$('infoModal').classList.contains('show')||$('aboutModal').classList.contains('show');
+  hideAll();
+  if(open&&history.state&&history.state.m){try{history.back()}catch(e){}}
+};
+window.addEventListener('popstate',hideAll);
+
+window.openM=(id)=>{
+  const f=FM.get(id);if(!f)return;
+  $('mName').textContent=nameOf(f);
+  $('mSize').textContent=f.size!=='-'?`${t(13)}: ${f.size}`:t(12);
+  $('mRarity').textContent=f.rarity;
+  $('mRarity').className=`mv r${rCls(f.rarity)[0].toLowerCase()}`;
+  $('mGems').innerHTML=`<img src="images/diamond.png" class="di" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='inline'"><span style="display:none">💎</span><span>${fmt(f.gems)}</span>`;
+  if(f.event){$('mEventRow').style.display='flex';$('mEvent').textContent=f.event;$('mEvent').className='meb'}
+  else $('mEventRow').style.display='none';
+  const img=$('mImg'),em=$('mEmoji');
+  img.style.display='none';em.style.display='block';em.textContent=emoji(f.name);
+  img.onerror=()=>{img.style.display='none';em.style.display='block'};
+  img.onload=()=>{img.style.display='block';em.style.display='none'};
+  img.src=imgPath(f);
+  $('infoModal').classList.add('show');
+  document.body.style.overflow='hidden';
+  pushState();
+};
+window.openAbout=()=>{
+  $('aboutModal').classList.add('show');
+  document.body.style.overflow='hidden';
+  pushState();
+};
+
+// === RESET (2x tap biar nggak kehapus nggak sengaja) & COPY ===
+let resetT;
+function resetLabel(){const b=$('resetBtn');b.classList.remove('confirm');b.textContent=t(5)}
+window.resetAll=()=>{
+  const b=$('resetBtn');
+  if(!b.classList.contains('confirm')){
+    if(!Object.values(qty).some(v=>v>0))return;
+    b.classList.add('confirm');b.textContent=x('tap');
+    clearTimeout(resetT);resetT=setTimeout(resetLabel,3000);
+    return;
+  }
+  clearTimeout(resetT);resetLabel();
+  qty={};store.del('bw_qty');
+  render();calc();
+  showToast(t(8));
+};
+
+async function copyText(s){
+  try{
+    if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(s);return true}
+  }catch(e){}
+  try{
+    const ta=document.createElement('textarea');
+    ta.value=s;ta.setAttribute('readonly','');
+    ta.style.cssText='position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();ta.setSelectionRange(0,s.length);
+    const ok=document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  }catch(e){return false}
+}
+
+window.copyTotal=async()=>{
+  let s=t(15),has=false;
+  for(const k in qty){
+    const f=FM.get(+k);
+    if(f&&qty[k]>0){has=true;s+=`• ${nameOf(f)} x ${qty[k]} = ${fmt(f.gems*qty[k])} Gems\n`}
+  }
+  if(!has)s+=t(16);
+  s+=`\n============================\n${t(17)}: ${$('totalItems').textContent}\n${t(18)}: ${$('totalGems').textContent}\n`;
+  const ok=await copyText(s);
+  ok?showToast(t(7)):showToast(x('fail'),true);
+};
+
+// === EVENTS ===
+$('searchInput').addEventListener('input',e=>{
+  search=e.target.value;
+  $('clearSearch').style.display=search?'flex':'none';
+  render();
+});
+$('searchInput').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur()});
+$('clearSearch').addEventListener('click',()=>{
+  $('searchInput').value='';search='';$('clearSearch').style.display='none';render();
+});
+$('filterContainer').addEventListener('click',e=>{
+  const b=e.target.closest('.fb');
+  if(!b)return;
+  document.querySelectorAll('.fb').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');filt=b.dataset.filter;render();
+  const c=$('filterContainer');
+  c.scrollTo({left:b.offsetLeft-c.clientWidth/2+b.clientWidth/2,behavior:'smooth'});
+});
+
+// === INIT ===
+setLang();render();calc();
+</script>
+</body>
+</html>
